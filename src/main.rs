@@ -1,5 +1,6 @@
 use deno_core::error::AnyError;
 use std::{path::PathBuf, process::Command, rc::Rc, thread};
+use tokio::io::{AsyncBufReadExt, BufReader};
 
 #[tokio::main]
 async fn main() {
@@ -11,10 +12,10 @@ async fn main() {
 
     let file_path = PathBuf::from(args.nth(1).unwrap());
 
-    let current_dir = std::env::current_dir().unwrap();
+    let working_dir = std::env::current_dir().unwrap();
 
-    println!("{}", file_path.to_str().unwrap());
-    println!("{}", current_dir.to_str().unwrap());
+    // println!("{}", file_path.to_str().unwrap());
+    // println!("{}", working_dir.to_str().unwrap());
 
     if cfg!(target_os = "windows") {
         let mut command = Command::new("cmd");
@@ -25,17 +26,42 @@ async fn main() {
             "--write",
             file_path.to_str().unwrap(),
         ]);
+
         command.output().expect("Something unexpected happens");
     }
+    if cfg!(target_os = "linux") {
+        let mut command = Command::new("bash");
+        command.args([
+            "npx",
+            "biome",
+            "format",
+            "--write",
+            file_path.to_str().unwrap(),
+        ]);
 
-
-    let file_path = "C:\\Users\\do.tran\\Desktop\\newme\\snaptik-parser\\snaptik.js";
-    let file_content = tokio::fs::read_to_string(file_path).await.unwrap();
-    let splits: Vec<&str> = file_content.split("\n").collect();
-    dbg!(splits[42]);
+        command.output().expect("Something unexpected happens");
+        insert_console_log(&file_path).await.unwrap();
+        spawn_js_file(file_path.clone(), working_dir.clone());
+    }
 }
 
-fn spawn_js_file(file_path: &PathBuf, current_dir: &PathBuf){
+async fn insert_console_log(file_path: &PathBuf) -> std::io::Result<()> {
+    let file_content = tokio::fs::read_to_string(file_path).await?;
+    let lines: Vec<String> = file_content.split('\n').map(|x| x.to_owned()).collect();
+    let mut new_vec_content = Vec::with_capacity(lines.len() + 1);
+    for (index, line) in lines.iter().enumerate() {
+        if index == 44 {
+            new_vec_content.push("console.log(decodeURIComponent(escape(r)))");
+        }
+        new_vec_content.push(line);
+    }
+
+    let new_content = new_vec_content.join("\n");
+    tokio::fs::write(file_path, new_content).await?;
+    Ok(())
+}
+
+fn spawn_js_file(file_path: PathBuf, current_dir: PathBuf) {
     let thread = thread::spawn(move || {
         let runtime = tokio::runtime::Builder::new_current_thread()
             .enable_all()
