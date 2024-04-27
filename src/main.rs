@@ -14,9 +14,6 @@ async fn main() {
 
     let working_dir = std::env::current_dir().unwrap();
 
-    // println!("{}", file_path.to_str().unwrap());
-    // println!("{}", working_dir.to_str().unwrap());
-
     if cfg!(target_os = "windows") {
         let mut command = Command::new("cmd");
         command.args([
@@ -30,16 +27,11 @@ async fn main() {
         command.output().expect("Something unexpected happens");
     }
     if cfg!(target_os = "linux") {
-        let mut command = Command::new("bash");
-        command.args([
-            "npx",
-            "biome",
-            "format",
-            "--write",
-            file_path.to_str().unwrap(),
-        ]);
-
-        command.output().expect("Something unexpected happens");
+        let mut command = Command::new("npx");
+        command
+            .args(["biome", "format", "--write", file_path.to_str().unwrap()])
+            .output()
+            .unwrap();
         insert_console_log(&file_path).await.unwrap();
         spawn_js_file(file_path.clone(), working_dir.clone());
     }

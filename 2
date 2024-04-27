@@ -1,0 +1,18 @@
+warning: unused import: `BufReader`
+ --> src/main.rs:3:34
+  |
+3 | use tokio::io::{AsyncBufReadExt, BufReader};
+  |                                  ^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `AsyncBufReadExt`
+ --> src/main.rs:3:17
+  |
+3 | use tokio::io::{AsyncBufReadExt, BufReader};
+  |                 ^^^^^^^^^^^^^^^
+
+warning: `snaptik-parser` (bin "snaptik-parser") generated 2 warnings (run `cargo fix --bin "snaptik-parser"` to apply 1 suggestion)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.12s
+     Running `target/debug/snaptik-parser '27-04-2024-10:02:26.js' 1`
+Usage snaptikparser 'jsfile'
