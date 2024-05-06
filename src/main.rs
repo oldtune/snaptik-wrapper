@@ -1,40 +1,30 @@
 use deno_core::error::AnyError;
 use std::{path::PathBuf, process::Command, rc::Rc, thread};
-use tokio::io::{AsyncBufReadExt, BufReader};
 
 #[tokio::main]
 async fn main() {
     let mut args = std::env::args();
     if args.len() != 2 {
-        println!("Usage snaptikparser 'jsfile'");
+        eprintln!("Usage snaptikparser 'jsfile'");
         return;
     }
 
     let file_path = PathBuf::from(args.nth(1).unwrap());
 
+    if !valid_path(&file_path) {
+        panic!("Path {} doesn't exist", file_path.to_str().unwrap());
+    }
+
     let working_dir = std::env::current_dir().unwrap();
 
-    if cfg!(target_os = "windows") {
-        let mut command = Command::new("cmd");
-        command.args([
-            "npx",
-            "biome",
-            "format",
-            "--write",
-            file_path.to_str().unwrap(),
-        ]);
+    let mut command = Command::new("npx");
+    command
+        .args(["biome", "format", "--write", file_path.to_str().unwrap()])
+        .output()
+        .unwrap();
 
-        command.output().expect("Something unexpected happens");
-    }
-    if cfg!(target_os = "linux") {
-        let mut command = Command::new("npx");
-        command
-            .args(["biome", "format", "--write", file_path.to_str().unwrap()])
-            .output()
-            .unwrap();
-        insert_console_log(&file_path).await.unwrap();
-        spawn_js_file(file_path.clone(), working_dir.clone());
-    }
+    insert_console_log(&file_path).await.unwrap();
+    spawn_js_file(file_path.clone(), working_dir.clone());
 }
 
 async fn insert_console_log(file_path: &PathBuf) -> std::io::Result<()> {
@@ -92,4 +82,8 @@ async fn run_js(file_path: &str, current_dir: &str) -> Result<(), AnyError> {
         .await?;
 
     result.await
+}
+
+fn valid_path(path: &PathBuf) -> bool {
+    path.exists()
 }
