@@ -16,13 +16,27 @@ async fn main() {
     }
 
     let working_dir = std::env::current_dir().unwrap();
+    if cfg!(target_os = "windows") {
+        let mut command = Command::new("powershell");
+        command
+            .args([
+                "npx",
+                "biome",
+                "format",
+                "--write",
+                file_path.to_str().unwrap(),
+            ])
+            .output()
+            .unwrap();
+    }
 
-    let mut command = Command::new("npx");
-    command
-        .args(["biome", "format", "--write", file_path.to_str().unwrap()])
-        .output()
-        .unwrap();
-
+    if cfg!(target_os = "linux") {
+        let mut command = Command::new("npx biome");
+        command
+            .args(["biome", "format", "--write", file_path.to_str().unwrap()])
+            .output()
+            .unwrap();
+    }
     insert_console_log(&file_path).await.unwrap();
     spawn_js_file(file_path.clone(), working_dir.clone());
 }
@@ -30,12 +44,26 @@ async fn main() {
 async fn insert_console_log(file_path: &PathBuf) -> std::io::Result<()> {
     let file_content = tokio::fs::read_to_string(file_path).await?;
     let lines: Vec<String> = file_content.split('\n').map(|x| x.to_owned()).collect();
-    let mut new_vec_content = Vec::with_capacity(lines.len() + 1);
+    let mut new_vec_content: Vec<String> = Vec::with_capacity(lines.len() + 1);
     for (index, line) in lines.iter().enumerate() {
-        if index == 44 {
-            new_vec_content.push("console.log(decodeURIComponent(escape(r)))");
+        if index == 31 || index == 53 {
+            let line = "//".to_string() + line;
+            new_vec_content.push(line);
+            continue;
         }
-        new_vec_content.push(line);
+
+        if index == 52 {
+            //todo
+            let line = line.replace(",", "");
+            new_vec_content.push(line);
+            continue;
+        }
+
+        if index == 44 {
+            new_vec_content.push("console.log(decodeURIComponent(escape(r)))".to_owned());
+        }
+
+        new_vec_content.push(line.to_owned());
     }
 
     let new_content = new_vec_content.join("\n");
